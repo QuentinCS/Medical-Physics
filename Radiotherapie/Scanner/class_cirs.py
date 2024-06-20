@@ -14,7 +14,6 @@ import pandas as pd
 import pydicom as dcm
 import numpy as np
 import shutil
-import time
 import cv2
 import os
 
@@ -56,6 +55,8 @@ class cirs_analyse:
         if os.path.exists(f'{self.dir_to_save}/{self.name}'):
             shutil.rmtree(f'{self.dir_to_save}/{self.name}')
         os.makedirs(f'{self.dir_to_save}/{self.name}')
+        if os.path.exists(f'{self.dir_to_save}/{self.name}/Slices'):
+            shutil.rmtree(f'{self.dir_to_save}/{self.name}/Slices')
         os.makedirs(f'{self.dir_to_save}/{self.name}/Slices/')
         
         # Creation of a dataframe for the value and the analysis of the ROIs
@@ -64,7 +65,8 @@ class cirs_analyse:
         self.analyse()
         if self.plot == True:
             self.plot_hu_ed()
-            
+        
+        # Assemble data and save it
         self.resume_data()
         self.save()
                
@@ -239,7 +241,7 @@ class cirs_analyse:
                 plt.imshow(o, cmap='gray')
                 plt.title(f'{self.name}')
                 plt.colorbar()
-                plt.savefig(f'{self.dir_to_save}/{self.name}/verif_ROI.png')
+                plt.savefig(f'{self.dir_to_save}/{self.name}/verif_center_ROI.png')
                 if self.slice != 0:
                     plt.close()
                     plt.savefig(f'{self.dir_to_save}/{self.name}/Slices/verif_ROI_slice_{serie}.png')
