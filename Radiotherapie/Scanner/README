@@ -1,0 +1,3 @@
+Code based on class to analyse the data from CT (or CBCT) acquisition using the CIRS 062 phantom and plot the hounsfield unit- electronic density curve. The code use the relative positions of the insert to position the different ROIs based on the CIRS 062 geometry values obtained using ImageJ software. It assume that the phantom is well positionned (especially the code doesn't correct for rotation of the phantom).
+The HU's mean values are obtained for each ROI using few slices (nb_slice) centered int the middle of the slices (important to have a centered acquisition). It is possible to display the positionned ROI on the image to check the correct position of the different ROIs.
+All the results, parameters and figures are saved in directory (dir_to_save).
