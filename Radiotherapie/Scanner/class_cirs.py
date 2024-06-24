@@ -31,7 +31,7 @@ class cirs_analyse:
         self.Dir = Dir # The directory to get the CT scans 
         self.name = name # Name can be used for plotting 
         self.plot = plot # Allow to plot directly when analyse the data
-        self.dir_to_save = dir_to_save # Directory to save results and details
+        self.dir_to_save = f'{dir_to_save}_{date.today()}' # Directory to save results and details
         self.ref = ref  # Allows to use reference pixel (manual or from another class object), need to fill reference_coords variable
         self.nb_slice = nb_slice # Number of slices to calculate mean ROIs
         self.reference_coor = reference_coor # Value of pixel position (manual or from another class object)
@@ -49,19 +49,48 @@ class cirs_analyse:
         # Check if directory already exist, erase and create-the directory
         # WARNING remove directory if already exist
         if os.path.exists(self.dir_to_save):
-            print('Directory already exist, data will be saved in former directory')
+            print(f'Directory already exist, data will be saved in {self.dir_to_save}')
         else:
             print('Creating directory')
             os.makedirs(self.dir_to_save)
         if os.path.exists(f'{self.dir_to_save}/{self.name}'):
             shutil.rmtree(f'{self.dir_to_save}/{self.name}')
         os.makedirs(f'{self.dir_to_save}/{self.name}')
-        if os.path.exists(f'{self.dir_to_save}/{self.name}/Slices'):
-            shutil.rmtree(f'{self.dir_to_save}/{self.name}/Slices')
-        os.makedirs(f'{self.dir_to_save}/{self.name}/Slices/')
+        os.makedirs(f'{self.dir_to_save}/{self.name}/Images/')
         
-        # Creation of a dataframe for the value and the analysis of the ROIs
-        self.df = pd.DataFrame(list(zip(material, density)), columns = ['Material', 'Density'])
+        # Select language option for saved data ('French' or 'English')
+        self.language = 'English'
+        
+        if self.language == 'English':
+            self.xlabel = r'Density ($g.cm^{-3}$)'
+            self.ylabel = 'Hounsfield unit (HU)'
+            self.de_name = 'Density'
+            self.uh_name = 'Hounsfield units'
+            self.res_name = 'Results'
+            self.par_name = 'Parameters'
+            self.mat = ['Bone 800', 'Bone 200', 'Muscle', 'Liver', 'Breast', 'Adipose', 'Lung inhale', 'Lung exhale', 'Water']#, 'PMMA']
+            self.mat_name = 'Materials'
+            self.slice_name = 'Slice'
+            self.excel_file = 'Data analysis CIRS'
+            self.data_name = 'Full data'
+            self.hu = 'HU'
+        if self.language == 'French':
+            self.xlabel = r'Masse volumique ($g.cm^{-3}$)'
+            self.ylabel = 'Unités Hounsfield (HU)'
+            self.de_name = 'Masse volumique'
+            self.uh_name = 'Unité hounsfield'
+            self.res_name = 'Résultats'
+            self.par_name = 'Paramètres'
+            self.mat = ['Os 800', 'Os 200', 'Muscle', 'Foie', 'Sein', 'Tissus adipeux', 'Poumon inspi', 'Poumon expi', 'Eau']#, 'PMMA']
+            self.mat_name = 'Matériaux'
+            self.slice_name = 'Coupe'
+            self.excel_file = 'Données analyse CIRS'
+            self.data_name = 'Données complètes'
+            self.hu = 'UH'
+            
+        # Creation of a dataframe for the value and the analysis of the     
+        self.df = pd.DataFrame(list(zip(self.mat, density)), columns = [self.mat_name, self.de_name])
+        
         # Analyse the images 
         self.analyse()
         if self.plot == True:
@@ -70,6 +99,7 @@ class cirs_analyse:
         # Assemble data and save it
         self.resume_data()
         self.save()
+        print(f'Analysis {self.name} done.\n')
                
     ############################### Function ###############################################      
             
@@ -189,9 +219,7 @@ class cirs_analyse:
                 roi_breast_int = self.create_circular_mask(image_np.shape[1], image_np.shape[2], [self.pixel_coords[0] + dist_breast_int[0]/self.pixel_size, self.pixel_coords[1] + dist_breast_int[1]/self.pixel_size], self.roi_size)
                 roi_adip_ext = self.create_circular_mask(image_np.shape[1], image_np.shape[2], [self.pixel_coords[0] + dist_adip_ext[0]/self.pixel_size, self.pixel_coords[1] + dist_adip_ext[1]/self.pixel_size], self.roi_size)
                 roi_breast_ext = self.create_circular_mask(image_np.shape[1], image_np.shape[2], [self.pixel_coords[0] + dist_breast_ext[0]/self.pixel_size, self.pixel_coords[1] + dist_breast_ext[1]/self.pixel_size], self.roi_size)
-                
-                #roi_pmma = self.create_circular_mask(image_np.shape[1], image_np.shape[2], [self.pixel_coords[0] + dist_pmma[0]/self.pixel_size, self.pixel_coords[1] + dist_pmma[1]/self.pixel_size], self.roi_size)
-                
+                               
                 # Extraction of the different ROI using mask (zero value outside the ROIs)
                 img_roi_water = image_np[0].copy()
                 img_roi_water[~roi_water] = 0
@@ -230,9 +258,6 @@ class cirs_analyse:
                 img_roi_adip_ext[~roi_adip_ext] = 0
                 img_roi_breast_ext = image_np[0].copy()
                 img_roi_breast_ext[~roi_breast_ext] = 0
-         
-                #img_roi_pmma = image_np[0].copy()
-                #img_roi_pmma[~roi_pmma] = 0
 
                 # Plot the image and the different superimposed to check the correct position (by default activate on the first slice)
                 img_roi_insert = img_roi_water + img_roi_lung_exhale_ext + img_roi_lung_exhale_int + img_roi_lung_inhale_ext + img_roi_lung_inhale_int + img_roi_bone200_ext + img_roi_bone200_int + img_roi_bone800_ext + img_roi_bone800_int + img_roi_muscle_ext + img_roi_muscle_int + img_roi_liver_ext + img_roi_liver_int + img_roi_breast_ext + img_roi_breast_int + img_roi_adip_ext + img_roi_adip_int# + img_roi_pmma
@@ -242,39 +267,39 @@ class cirs_analyse:
                 plt.imshow(o, cmap='gray')
                 plt.title(f'{self.name}')
                 plt.colorbar()
-                plt.savefig(f'{self.dir_to_save}/{self.name}/verif_center_ROI.png')
+                plt.savefig(f'{self.dir_to_save}/{self.name}/{self.slice_name}_center_ROIs.png')
                 if self.slice != 0:
                     plt.close()
-                    plt.savefig(f'{self.dir_to_save}/{self.name}/Slices/verif_ROI_slice_{serie}.png')
+                    plt.savefig(f'{self.dir_to_save}/{self.name}/Images/{self.slice_name}_{serie}_ROIs.png')
 
                 # Save the value of mean UH for the different ROIs
                 # Do for the inner ROIs and the outer ROIs separately
-                self.df.loc[:,f'Coupe int {self.slice}'] = [np.sum(img_roi_bone800_int)/(np.pi*self.roi_size**2), np.sum(img_roi_bone200_int)/(np.pi*self.roi_size**2), np.sum(img_roi_muscle_int)/(np.pi*self.roi_size**2), np.sum(img_roi_liver_int)/(np.pi*self.roi_size**2), np.sum(img_roi_breast_int)/(np.pi*self.roi_size**2), np.sum(img_roi_adip_int)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_inhale_int)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_exhale_int)/(np.pi*self.roi_size**2), np.sum(img_roi_water)/(np.pi*self.roi_size**2)]#, np.sum(img_roi_pmma)/(np.pi*self.roi_size**2)]
-                self.df.loc[:,f'Coupe ext {self.slice}'] = [np.sum(img_roi_bone800_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_bone200_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_muscle_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_liver_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_breast_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_adip_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_inhale_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_exhale_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_water)/(np.pi*self.roi_size**2)]#, np.sum(img_roi_pmma)/(np.pi*self.roi_size**2)]
-                self.df.loc[:,f'Coupe STD int {self.slice}'] = [self.stdev_roi(img_roi_bone800_int), self.stdev_roi(img_roi_bone200_int), self.stdev_roi(img_roi_muscle_int), self.stdev_roi(img_roi_liver_int), self.stdev_roi(img_roi_breast_int), self.stdev_roi(img_roi_adip_int), self.stdev_roi(img_roi_lung_inhale_int), self.stdev_roi(img_roi_lung_exhale_int), self.stdev_roi(img_roi_water)]#, self.stdev_roi(img_roi_pmma)]
-                self.df.loc[:,f'Coupe STD ext {self.slice}'] = [self.stdev_roi(img_roi_bone800_ext), self.stdev_roi(img_roi_bone200_ext), self.stdev_roi(img_roi_muscle_ext), self.stdev_roi(img_roi_liver_ext), self.stdev_roi(img_roi_breast_ext), self.stdev_roi(img_roi_adip_ext), self.stdev_roi(img_roi_lung_inhale_ext), self.stdev_roi(img_roi_lung_exhale_ext), self.stdev_roi(img_roi_water)]#, self.stdev_roi(img_roi_pmma)]
+                self.df.loc[:,f'{self.slice_name} int {self.slice}'] = [np.sum(img_roi_bone800_int)/(np.pi*self.roi_size**2), np.sum(img_roi_bone200_int)/(np.pi*self.roi_size**2), np.sum(img_roi_muscle_int)/(np.pi*self.roi_size**2), np.sum(img_roi_liver_int)/(np.pi*self.roi_size**2), np.sum(img_roi_breast_int)/(np.pi*self.roi_size**2), np.sum(img_roi_adip_int)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_inhale_int)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_exhale_int)/(np.pi*self.roi_size**2), np.sum(img_roi_water)/(np.pi*self.roi_size**2)]
+                self.df.loc[:,f'{self.slice_name} ext {self.slice}'] = [np.sum(img_roi_bone800_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_bone200_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_muscle_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_liver_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_breast_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_adip_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_inhale_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_exhale_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_water)/(np.pi*self.roi_size**2)]
+                self.df.loc[:,f'{self.slice_name} STD int {self.slice}'] = [self.stdev_roi(img_roi_bone800_int), self.stdev_roi(img_roi_bone200_int), self.stdev_roi(img_roi_muscle_int), self.stdev_roi(img_roi_liver_int), self.stdev_roi(img_roi_breast_int), self.stdev_roi(img_roi_adip_int), self.stdev_roi(img_roi_lung_inhale_int), self.stdev_roi(img_roi_lung_exhale_int), self.stdev_roi(img_roi_water)]
+                self.df.loc[:,f'{self.slice_name} STD ext {self.slice}'] = [self.stdev_roi(img_roi_bone800_ext), self.stdev_roi(img_roi_bone200_ext), self.stdev_roi(img_roi_muscle_ext), self.stdev_roi(img_roi_liver_ext), self.stdev_roi(img_roi_breast_ext), self.stdev_roi(img_roi_adip_ext), self.stdev_roi(img_roi_lung_inhale_ext), self.stdev_roi(img_roi_lung_exhale_ext), self.stdev_roi(img_roi_water)]
                 self.slice += 1
 
         # Compute the mean on all the selected slice for the mean HU values and save in the dataframe
-        self.df.loc[:,f'UH int {self.protocol} {self.tension} kV'] = sum([self.df[f'Coupe int {i}'] for i in range(self.nb_slice)]) / self.nb_slice
-        self.df.loc[:,f'UH ext {self.protocol} {self.tension} kV'] = sum([self.df[f'Coupe ext {i}'] for i in range(self.nb_slice)]) / self.nb_slice
-        self.df.loc[:,f'UH {self.protocol} {self.tension} kV'] = (self.df[f'UH int {self.protocol} {self.tension} kV'] + self.df[f'UH ext {self.protocol} {self.tension} kV'])/2
-        self.df.loc[:,f'STD int {self.protocol} {self.tension} kV'] = sum([self.df[f'Coupe STD int {i}'] for i in range(self.nb_slice)]) /self.nb_slice
-        self.df.loc[:,f'STD ext {self.protocol} {self.tension} kV'] = sum([self.df[f'Coupe STD ext {i}'] for i in range(self.nb_slice)]) /self.nb_slice
+        self.df.loc[:,f'{self.hu} int {self.protocol} {self.tension} kV'] = sum([self.df[f'{self.slice_name} int {i}'] for i in range(self.nb_slice)]) / self.nb_slice
+        self.df.loc[:,f'{self.hu} ext {self.protocol} {self.tension} kV'] = sum([self.df[f'{self.slice_name} ext {i}'] for i in range(self.nb_slice)]) / self.nb_slice
+        self.df.loc[:,f'{self.hu} {self.protocol} {self.tension} kV'] = (self.df[f'{self.hu} int {self.protocol} {self.tension} kV'] + self.df[f'{self.hu} ext {self.protocol} {self.tension} kV'])/2
+        self.df.loc[:,f'STD int {self.protocol} {self.tension} kV'] = sum([self.df[f'{self.slice_name} STD int {i}'] for i in range(self.nb_slice)]) /self.nb_slice
+        self.df.loc[:,f'STD ext {self.protocol} {self.tension} kV'] = sum([self.df[f'{self.slice_name} STD ext {i}'] for i in range(self.nb_slice)]) /self.nb_slice
         self.df.loc[:,f'STD {self.protocol} {self.tension} kV'] = (self.df[f'STD int {self.protocol} {self.tension} kV'] + self.df[f'STD ext {self.protocol} {self.tension} kV'])/2
-        self.df = self.df.sort_values(by=['Density'], ascending=False)
+        self.df = self.df.sort_values(by=[self.de_name], ascending=False)
 
     # Function for plot the HU curve as function of the electronic densities (disable by default)
     def plot_hu_ed(self): 
         plt.figure(figsize=(40, 20))
         plt.style.use('ggplot')
         plt.rc('font', size=40)
-        plt.plot(self.df['Density'][:], self.df[f'UH {self.protocol} {self.tension} kV'], label=f'UH {self.protocol} {self.tension} kV', marker='o', markersize=12, color='navy')
+        plt.plot(self.df[self.de_name][:], self.df[f'{self.hu} {self.protocol} {self.tension} kV'], label=f'{self.protocol} {self.tension} kV', marker='o', markersize=12, color='navy')
         plt.text(1.2, -600, f'{self.device}\n {self.tension} kV\n {self.charge} mAs\n {self.position}\n Slice: {self.slice_thickness} mm\n Pixel: {self.pixel_size:.3f} mm\n {self.size_row} x {self.size_column}', fontsize=30, color='gray')
-        plt.ylabel('Hounsfield unit (HU)')
-        plt.xlabel(r'Density ($g.cm^{-3}$)')
+        plt.ylabel(self.ylabel)
+        plt.xlabel(self.xlabel)
         plt.legend()
-        plt.savefig(f'{self.dir_to_save}/{self.name}/HU.png')
+        plt.savefig(f'{self.dir_to_save}/{self.name}/{self.hu}.png')
         
     # Function to calculate the noise in the ROIs     
     def stdev_roi(self, img):
@@ -284,18 +309,26 @@ class cirs_analyse:
     
     # Function to assemble data from Dicom and analysis to save into dataframe
     def resume_data(self):
-        data = {
-                'Parameter': ['Version', 'Device', 'Hospital', 'Date', 'Time', 'Protocol', 'Tension (kV)', 'Charge (mAs)','CTDI (mGy)', 'Slice thickness (mm)', 'Pixel size (mm)', 'Matrix', 'Patient position', 'Reconstruction', 'Nb slices used', 'Central Slice'],
-                'Value': [f'Python {python_version()}', self.device, self.hospital, self.date, self.time, self.protocol, self.tension, self.charge, self.ctdi, self.slice_thickness, self.pixel_size, f'{self.size_row} x {self.size_column}', self.position, self.recons, self.nb_slice, self.central_slice]
-                }
-        self.data_info = pd.DataFrame(data, columns=['Parameter', 'Value'])
+        if self.language == 'English':
+            data = {
+                    'Parameters': ['Version', 'Device', 'Hospital', 'Date', 'Time', 'Protocol', 'Tension (kV)', 'Charge (mAs)','CTDI (mGy)', 'Slice thickness (mm)', 'Pixel size (mm)', 'Matrix', 'Patient position', 'Reconstruction', 'Analysis date', 'Nb slices used', 'Central Slice'],
+                    'Value': [f'Python {python_version()}', self.device, self.hospital, self.date, self.time, self.protocol, self.tension, self.charge, self.ctdi, self.slice_thickness, self.pixel_size, f'{self.size_row} x {self.size_column}', self.position, self.recons, date.today(), self.nb_slice, self.central_slice]
+                    }
+            self.data_info = pd.DataFrame(data, columns=['Parameters', 'Value'])
+        if self.language == 'French':
+            data = {
+                    'Paramètres': ['Version', 'Machine', 'Hopital', 'Date', 'Heure', 'Protocole', 'Tension (kV)', 'Charge (mAs)','CTDI (mGy)', 'Epaisseur de coupe (mm)', 'Taille du pixel (mm)', 'Matrice', 'Position', 'Reconstruction', 'Date analyse', 'Nb coupes utilisées', 'Coupe centrale'],
+                    'Valeur': [f'Python {python_version()}', self.device, self.hospital, self.date, self.time, self.protocol, self.tension, self.charge, self.ctdi, self.slice_thickness, self.pixel_size, f'{self.size_row} x {self.size_column}', self.position, self.recons, date.today(), self.nb_slice, self.central_slice]
+                    }
+            self.data_info = pd.DataFrame(data, columns=['Paramètres', 'Valeur'])
         
     # Function to save to excel file results and data parameters
     def save(self):
-        with pd.ExcelWriter(f'{self.dir_to_save}/{self.name}/Data CIRS {self.name}.xlsx') as file:
-            self.data_info.to_excel(file, sheet_name='Parameters')
-            self.df.to_excel(file, sheet_name='Results', columns=['Material', 'Density', f'UH {self.protocol} {self.tension} kV', f'STD {self.protocol} {self.tension} kV'])
-                   
+        with pd.ExcelWriter(f'{self.dir_to_save}/{self.name}/{self.excel_file} {self.name}.xlsx') as file:
+             self.data_info.to_excel(file, sheet_name=self.par_name)
+             self.df.to_excel(file, sheet_name=self.res_name, columns=[self.mat_name, self.de_name, f'{self.hu} {self.protocol} {self.tension} kV', f'STD {self.protocol} {self.tension} kV'])
+             self.df.to_excel(file, sheet_name=self.data_name)
+             
 ################################# Data ###############################################
 
 # CIRS's Insert data for the different materials 
@@ -310,7 +343,7 @@ density = [1.53, 1.16, 1.06, 1.07, 0.99, 0.96, 0.2, 0.5, 1]#, 1.029]
 # Head insert: Bone 200 int - Liver int - Lung exhale int - Adipose int - Bone 800 int - Muscle int - Lung inhale int - Breast int
 # Body insert: Bone 800 ext - Muscle ext - Lung inhale ext - Breast ext - Bone 200 ext - Liver ext - Lung exhale ext - Adipose ext
 
-# Distances in mm 
+# Distances in mm from the center ROIs
 R1 = 62
 R2 = 115
 R3 = 60
