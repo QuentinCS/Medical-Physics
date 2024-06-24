@@ -6,6 +6,7 @@ Created on Tue Jun 18 12:22:49 2024
 @author: quentin
 """
 
+from platform import python_version
 import matplotlib.pyplot as plt
 from datetime import date
 from datetime import datetime
@@ -284,8 +285,8 @@ class cirs_analyse:
     # Function to assemble data from Dicom and analysis to save into dataframe
     def resume_data(self):
         data = {
-                'Parameter': ['Device', 'Hospital', 'Date', 'Time', 'Protocol', 'Tension (kV)', 'Charge (mAs)','CTDI (mGy)', 'Slice thickness (mm)', 'Pixel size (mm)', 'Matrix', 'Patient position', 'Reconsctruction', 'Nb slices used', 'Central Slice'],
-                'Value': [self.device, self.hospital, self.date, self.time, self.protocol, self.tension, self.charge, self.ctdi, self.slice_thickness, self.pixel_size, f'{self.size_row} x {self.size_column}', self.position, self.recons, self.nb_slice, self.central_slice]
+                'Parameter': ['Version', 'Device', 'Hospital', 'Date', 'Time', 'Protocol', 'Tension (kV)', 'Charge (mAs)','CTDI (mGy)', 'Slice thickness (mm)', 'Pixel size (mm)', 'Matrix', 'Patient position', 'Reconstruction', 'Nb slices used', 'Central Slice'],
+                'Value': [f'Python {python_version()}', self.device, self.hospital, self.date, self.time, self.protocol, self.tension, self.charge, self.ctdi, self.slice_thickness, self.pixel_size, f'{self.size_row} x {self.size_column}', self.position, self.recons, self.nb_slice, self.central_slice]
                 }
         self.data_info = pd.DataFrame(data, columns=['Parameter', 'Value'])
         
