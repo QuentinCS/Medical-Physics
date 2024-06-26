@@ -129,11 +129,13 @@ class cirs_analyse:
     # Main function to get the data from the Dicom and get different Tag Dicom values
     def analyse(self):        
         
-        self.slice = 0
+        self.slice_used = []
         files = []
         for dirName, subdirList, self.fileList in os.walk(self.Dir):
             files.append(self.fileList)
         self.fileList = [f for f in self.fileList if f.startswith('CT')]
+        
+        self.slice = []
 
         for i in range(0, len(self.fileList)):
 
@@ -156,8 +158,9 @@ class cirs_analyse:
             self.size_column = dicom_data[0x00280011].value
             self.roi_size = int(1*0.2*self.size_insert/self.pixel_size)
             self.central_slice = (int(len(self.fileList)/2))
-            self.central_slice = 35
+            #self.central_slice = 35
             serie = dicom_data[0x00200013].value
+            self.slice.append(serie)
             
             # Loop on the number of slices needed for the computation, center the slices on the middle instance (median slice correct if the phantom is well centered)
             if serie >= (int(self.central_slice) - int(self.nb_slice/2)) and serie < (int(self.central_slice) + int(self.nb_slice/2)):
@@ -166,7 +169,7 @@ class cirs_analyse:
                 img_itk = sitk.ReadImage(self.Dir + self.fileList[i])
                 image_np = sitk.GetArrayFromImage(img_itk)
          
-                if self.slice == 0 and self.ref == False:
+                if len(self.slice_used) == 0 and self.ref == False:
                     # Image normalisation to display image (optional)
                     image_visu = cv2.normalize(self.image, None, 0, 255, cv2.NORM_MINMAX)
                     image_visu = np.uint8(image_visu)
@@ -272,20 +275,20 @@ class cirs_analyse:
                     plt.close()
                     plt.savefig(f'{self.dir_to_save}/{self.name}/Images/{self.slice_name}_{serie}_ROIs.png')
 
+                self.slice_used.append(int(serie))
                 # Save the value of mean UH for the different ROIs
                 # Do for the inner ROIs and the outer ROIs separately
-                self.df.loc[:,f'{self.slice_name} int {self.slice}'] = [np.sum(img_roi_bone800_int)/(np.pi*self.roi_size**2), np.sum(img_roi_bone200_int)/(np.pi*self.roi_size**2), np.sum(img_roi_muscle_int)/(np.pi*self.roi_size**2), np.sum(img_roi_liver_int)/(np.pi*self.roi_size**2), np.sum(img_roi_breast_int)/(np.pi*self.roi_size**2), np.sum(img_roi_adip_int)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_inhale_int)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_exhale_int)/(np.pi*self.roi_size**2), np.sum(img_roi_water)/(np.pi*self.roi_size**2)]
-                self.df.loc[:,f'{self.slice_name} ext {self.slice}'] = [np.sum(img_roi_bone800_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_bone200_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_muscle_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_liver_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_breast_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_adip_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_inhale_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_exhale_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_water)/(np.pi*self.roi_size**2)]
-                self.df.loc[:,f'{self.slice_name} STD int {self.slice}'] = [self.stdev_roi(img_roi_bone800_int), self.stdev_roi(img_roi_bone200_int), self.stdev_roi(img_roi_muscle_int), self.stdev_roi(img_roi_liver_int), self.stdev_roi(img_roi_breast_int), self.stdev_roi(img_roi_adip_int), self.stdev_roi(img_roi_lung_inhale_int), self.stdev_roi(img_roi_lung_exhale_int), self.stdev_roi(img_roi_water)]
-                self.df.loc[:,f'{self.slice_name} STD ext {self.slice}'] = [self.stdev_roi(img_roi_bone800_ext), self.stdev_roi(img_roi_bone200_ext), self.stdev_roi(img_roi_muscle_ext), self.stdev_roi(img_roi_liver_ext), self.stdev_roi(img_roi_breast_ext), self.stdev_roi(img_roi_adip_ext), self.stdev_roi(img_roi_lung_inhale_ext), self.stdev_roi(img_roi_lung_exhale_ext), self.stdev_roi(img_roi_water)]
-                self.slice += 1
+                self.df.loc[:,f'{self.slice_name} int {serie}'] = [np.sum(img_roi_bone800_int)/(np.pi*self.roi_size**2), np.sum(img_roi_bone200_int)/(np.pi*self.roi_size**2), np.sum(img_roi_muscle_int)/(np.pi*self.roi_size**2), np.sum(img_roi_liver_int)/(np.pi*self.roi_size**2), np.sum(img_roi_breast_int)/(np.pi*self.roi_size**2), np.sum(img_roi_adip_int)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_inhale_int)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_exhale_int)/(np.pi*self.roi_size**2), np.sum(img_roi_water)/(np.pi*self.roi_size**2)]
+                self.df.loc[:,f'{self.slice_name} ext {serie}'] = [np.sum(img_roi_bone800_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_bone200_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_muscle_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_liver_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_breast_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_adip_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_inhale_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_lung_exhale_ext)/(np.pi*self.roi_size**2), np.sum(img_roi_water)/(np.pi*self.roi_size**2)]
+                self.df.loc[:,f'{self.slice_name} STD int {serie}'] = [self.stdev_roi(img_roi_bone800_int), self.stdev_roi(img_roi_bone200_int), self.stdev_roi(img_roi_muscle_int), self.stdev_roi(img_roi_liver_int), self.stdev_roi(img_roi_breast_int), self.stdev_roi(img_roi_adip_int), self.stdev_roi(img_roi_lung_inhale_int), self.stdev_roi(img_roi_lung_exhale_int), self.stdev_roi(img_roi_water)]
+                self.df.loc[:,f'{self.slice_name} STD ext {serie}'] = [self.stdev_roi(img_roi_bone800_ext), self.stdev_roi(img_roi_bone200_ext), self.stdev_roi(img_roi_muscle_ext), self.stdev_roi(img_roi_liver_ext), self.stdev_roi(img_roi_breast_ext), self.stdev_roi(img_roi_adip_ext), self.stdev_roi(img_roi_lung_inhale_ext), self.stdev_roi(img_roi_lung_exhale_ext), self.stdev_roi(img_roi_water)]
 
         # Compute the mean on all the selected slice for the mean HU values and save in the dataframe
-        self.df.loc[:,f'{self.hu} int {self.protocol} {self.tension} kV'] = sum([self.df[f'{self.slice_name} int {i}'] for i in range(self.nb_slice)]) / self.nb_slice
-        self.df.loc[:,f'{self.hu} ext {self.protocol} {self.tension} kV'] = sum([self.df[f'{self.slice_name} ext {i}'] for i in range(self.nb_slice)]) / self.nb_slice
+        self.df.loc[:,f'{self.hu} int {self.protocol} {self.tension} kV'] = sum([self.df[f'{self.slice_name} int {i}'] for i in self.slice_used]) / self.nb_slice
+        self.df.loc[:,f'{self.hu} ext {self.protocol} {self.tension} kV'] = sum([self.df[f'{self.slice_name} ext {i}'] for i in self.slice_used]) / self.nb_slice
         self.df.loc[:,f'{self.hu} {self.protocol} {self.tension} kV'] = (self.df[f'{self.hu} int {self.protocol} {self.tension} kV'] + self.df[f'{self.hu} ext {self.protocol} {self.tension} kV'])/2
-        self.df.loc[:,f'STD int {self.protocol} {self.tension} kV'] = sum([self.df[f'{self.slice_name} STD int {i}'] for i in range(self.nb_slice)]) /self.nb_slice
-        self.df.loc[:,f'STD ext {self.protocol} {self.tension} kV'] = sum([self.df[f'{self.slice_name} STD ext {i}'] for i in range(self.nb_slice)]) /self.nb_slice
+        self.df.loc[:,f'STD int {self.protocol} {self.tension} kV'] = sum([self.df[f'{self.slice_name} STD int {i}'] for i in self.slice_used]) /self.nb_slice
+        self.df.loc[:,f'STD ext {self.protocol} {self.tension} kV'] = sum([self.df[f'{self.slice_name} STD ext {i}'] for i in self.slice_used]) /self.nb_slice
         self.df.loc[:,f'STD {self.protocol} {self.tension} kV'] = (self.df[f'STD int {self.protocol} {self.tension} kV'] + self.df[f'STD ext {self.protocol} {self.tension} kV'])/2
         self.df = self.df.sort_values(by=[self.de_name], ascending=False)
 
@@ -311,14 +314,14 @@ class cirs_analyse:
     def resume_data(self):
         if self.language == 'English':
             data = {
-                    'Parameters': ['Version', 'Device', 'Hospital', 'Date', 'Time', 'Protocol', 'Tension (kV)', 'Charge (mAs)','CTDI (mGy)', 'Slice thickness (mm)', 'Pixel size (mm)', 'Matrix', 'Patient position', 'Reconstruction', 'Analysis date', 'Nb slices used', 'Central Slice'],
-                    'Value': [f'Python {python_version()}', self.device, self.hospital, self.date, self.time, self.protocol, self.tension, self.charge, self.ctdi, self.slice_thickness, self.pixel_size, f'{self.size_row} x {self.size_column}', self.position, self.recons, date.today(), self.nb_slice, self.central_slice]
+                    'Parameters': ['Device', 'Hospital', 'Date', 'Time', 'Protocol', 'Tension (kV)', 'Charge (mAs)','CTDI (mGy)', 'Slice thickness (mm)', 'Pixel size (mm)', 'Matrix', 'Patient position', 'Reconstruction', 'Python version', 'Analysis date', 'Nb slices used', 'Central Slice'],
+                    'Value': [self.device, self.hospital, self.date, self.time, self.protocol, self.tension, self.charge, self.ctdi, self.slice_thickness, self.pixel_size, f'{self.size_row} x {self.size_column}', self.position, self.recons, f'Python {python_version()}',  date.today(), len(self.slice_used), self.central_slice]
                     }
             self.data_info = pd.DataFrame(data, columns=['Parameters', 'Value'])
         if self.language == 'French':
             data = {
-                    'Paramètres': ['Version', 'Machine', 'Hopital', 'Date', 'Heure', 'Protocole', 'Tension (kV)', 'Charge (mAs)','CTDI (mGy)', 'Epaisseur de coupe (mm)', 'Taille du pixel (mm)', 'Matrice', 'Position', 'Reconstruction', 'Date analyse', 'Nb coupes utilisées', 'Coupe centrale'],
-                    'Valeur': [f'Python {python_version()}', self.device, self.hospital, self.date, self.time, self.protocol, self.tension, self.charge, self.ctdi, self.slice_thickness, self.pixel_size, f'{self.size_row} x {self.size_column}', self.position, self.recons, date.today(), self.nb_slice, self.central_slice]
+                    'Paramètres': ['Version', 'Machine', 'Hopital', 'Date', 'Heure', 'Protocole', 'Tension (kV)', 'Charge (mAs)','CTDI (mGy)', 'Epaisseur de coupe (mm)', 'Taille du pixel (mm)', 'Matrice', 'Position', 'Reconstruction', 'Version Python', 'Date analyse', 'Nb coupes utilisées', 'Coupe centrale'],
+                    'Valeur': [f'Python {python_version()}', self.device, self.hospital, self.date, self.time, self.protocol, self.tension, self.charge, self.ctdi, self.slice_thickness, self.pixel_size, f'{self.size_row} x {self.size_column}', self.position, self.recons, f'Python {python_version()}',  date.today(), len(self.slice_used), self.central_slice]
                     }
             self.data_info = pd.DataFrame(data, columns=['Paramètres', 'Valeur'])
         
